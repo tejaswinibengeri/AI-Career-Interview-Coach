@@ -1,0 +1,25 @@
+{
+  "name": "ai-career-interview-coach",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI-Powered Career & Interview Coach Fullstack Platform",
+  "scripts": {
+    "start": "node scripts/run.js",
+    "dev": "node scripts/run.js",
+    "run": "node scripts/run.js",
+    "frontend": "npm run dev --prefix frontend",
+    "backend": "cd backend && uvicorn app.main:app --reload",
+    "build": "npm run build --prefix frontend",
+    "install:all": "npm install --prefix frontend && pip install -r backend/requirements.txt"
+  },
+  "keywords": [
+    "career-coach",
+    "interview-prep",
+    "fastapi",
+    "react",
+    "vite"
+  ],
+  "author": "",
+  "license": "ISC"
+}
