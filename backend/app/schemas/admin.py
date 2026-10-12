@@ -60,3 +60,25 @@ class AdminResourceCreate(BaseModel):
     source: str = "Official Documentation"
     difficulty: str = "Beginner"
     resource_type: str = "Course"
+
+
+class AdminAuditLogItem(BaseModel):
+    """An administrative audit or telemetry event item."""
+
+    timestamp: datetime
+    event_type: str
+    description: str
+    actor: str
+
+
+class AdminSettingsResponse(BaseModel):
+    """Platform operational settings for administrators."""
+
+    app_name: str
+    app_version: str
+    environment: str
+    ollama_model: str
+    ollama_base_url: str
+    jwt_expiration_minutes: int
+    database_url_masked: str
+    registration_enabled: bool = True

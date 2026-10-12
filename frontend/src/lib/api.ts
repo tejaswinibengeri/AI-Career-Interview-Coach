@@ -750,6 +750,24 @@ export interface AdminUserData {
   created_at: string;
 }
 
+export interface AdminAuditLogData {
+  timestamp: string;
+  event_type: string;
+  description: string;
+  actor: string;
+}
+
+export interface AdminSettingsData {
+  app_name: string;
+  app_version: string;
+  environment: string;
+  ollama_model: string;
+  ollama_base_url: string;
+  jwt_expiration_minutes: number;
+  database_url_masked: string;
+  registration_enabled: boolean;
+}
+
 // --- Career Intelligence Interfaces ---
 export interface JobDescriptionAnalysisData {
   job_title?: string | null;
@@ -1484,6 +1502,18 @@ export const api = {
     return request<void>(`/api/v1/admin/resources/${id}`, {
       method: "DELETE",
     });
+  },
+
+  getAdminAuditLogs: () => {
+    return request<AdminAuditLogData[]>("/api/v1/admin/audit-logs");
+  },
+
+  getAdminSettings: () => {
+    return request<AdminSettingsData>("/api/v1/admin/settings");
+  },
+
+  getHealth: () => {
+    return request<HealthData>("/api/v1/health");
   },
 
   // --- Career Intelligence Methods ---

@@ -36,6 +36,9 @@ export default function AdminLayout() {
     { to: "/admin/users", label: "👥 Manage Users" },
     { to: "/admin/questions", label: "❓ Question Bank" },
     { to: "/admin/resources", label: "📚 Learning Catalog" },
+    { to: "/admin/health", label: "🖥️ System Health" },
+    { to: "/admin/audit", label: "🛡️ Audit Logs" },
+    { to: "/admin/settings", label: "⚙️ Platform Settings" },
   ];
 
   return (

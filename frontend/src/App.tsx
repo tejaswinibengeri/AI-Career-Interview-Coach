@@ -33,6 +33,9 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminQuestions from "./pages/admin/AdminQuestions";
 import AdminResources from "./pages/admin/AdminResources";
+import AdminHealth from "./pages/admin/AdminHealth";
+import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
+import AdminSettings from "./pages/admin/AdminSettings";
 import NotFound from "./pages/NotFound";
 
 /**
@@ -221,6 +224,9 @@ export default function App() {
               <Route path="users" element={<AdminUsers />} />
               <Route path="questions" element={<AdminQuestions />} />
               <Route path="resources" element={<AdminResources />} />
+              <Route path="health" element={<AdminHealth />} />
+              <Route path="audit" element={<AdminAuditLogs />} />
+              <Route path="settings" element={<AdminSettings />} />
             </Route>
 
             <Route

@@ -20,6 +20,7 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+  const isAdmin = user?.role === "admin" || Boolean(user?.is_superuser);
 
   // Close sidebar and notifications when route changes
   useEffect(() => {
@@ -123,6 +124,16 @@ export default function Navbar() {
     { to: "/learning-resources", label: "Learning Hub", icon: "📖", desc: "Courses, docs & roadmaps" },
     { to: "/performance", label: "Analytics", icon: "📈", desc: "Score breakdown & radar metrics" },
     { to: "/achievements", label: "Badges & Streaks", icon: "🏆", badge: "Trophies", desc: "Achievements & milestones" },
+  ];
+
+  const adminLinks = [
+    { to: "/admin/statistics", label: "System Telemetry & Stats", icon: "📊", desc: "Live database telemetry & usage metrics" },
+    { to: "/admin/users", label: "User Governance & Roles", icon: "👥", desc: "Manage accounts, roles & status" },
+    { to: "/admin/questions", label: "Question Bank Moderation", icon: "❓", desc: "Technical, behavioral & coding items" },
+    { to: "/admin/resources", label: "Learning Catalog", icon: "📚", desc: "Curated learning roadmaps & external docs" },
+    { to: "/admin/health", label: "Platform Health & Services", icon: "🖥️", desc: "FastAPI, Database & Ollama status" },
+    { to: "/admin/audit", label: "Security & Audit Logs", icon: "🛡️", desc: "Platform events, registrations & actions" },
+    { to: "/admin/settings", label: "Platform Settings", icon: "⚙️", desc: "LLM model params, environment & config" },
   ];
 
   return (
@@ -234,6 +245,18 @@ export default function Navbar() {
                     </span>
                   </Link>
 
+                  {/* Admin Quick Link Button */}
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 hover:text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
+                      title="Admin Control Center"
+                    >
+                      <span>👑</span>
+                      <span className="hidden sm:inline">Admin</span>
+                    </Link>
+                  )}
+
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -253,13 +276,20 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* CENTER: Minimal Clean Status Indicator / Quick Route Badge */}
+            {/* CENTER: Status Indicator / Admin Mode */}
             <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-surface-200/60">
               {isAuthenticated && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-900/60 border border-white/5 text-surface-200/80">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs font-medium">Active Workspace</span>
-                </div>
+                isAdmin ? (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-950/70 border border-purple-500/40 text-purple-300 shadow-sm">
+                    <span className="h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
+                    <span className="text-xs font-bold tracking-wide">Admin Governance Console</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-900/60 border border-white/5 text-surface-200/80">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-xs font-medium">Active Workspace</span>
+                  </div>
+                )
               )}
             </div>
 
@@ -331,6 +361,94 @@ export default function Navbar() {
 
               {/* MIDDLE SCROLLABLE NAVIGATION: All Feature Buttons */}
               <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
+
+                {isAdmin ? (
+                  /* EXCLUSIVELY ADMIN GOVERNANCE MODULES - NO CANDIDATE/TRAINING TASKS */
+                  <div className="space-y-6">
+                    {/* Admin Header Card */}
+                    <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/80 via-surface-900 to-red-950/40 border border-purple-500/30 space-y-1 shadow-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">👑</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-purple-300">
+                          Platform Administration
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-surface-200/70 leading-relaxed">
+                        Strictly dedicated to system governance, user permissions, telemetry, and platform moderation.
+                      </p>
+                    </div>
+
+                    {/* Admin Navigation Links */}
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-purple-400/90 px-2 flex items-center gap-1.5">
+                        <span>🛡️</span>
+                        <span>Administrative Operations</span>
+                      </p>
+                      <div className="grid grid-cols-1 gap-1.5">
+                        {adminLinks.map((item) => (
+                          <Link
+                            key={item.to}
+                            to={item.to}
+                            onClick={() => setSidebarOpen(false)}
+                            className={`flex items-center gap-3 p-2.5 rounded-xl transition-all cursor-pointer ${
+                              isActive(item.to)
+                                ? "bg-purple-600/30 text-purple-200 border border-purple-500/50 shadow-sm"
+                                : "hover:bg-white/5 text-surface-200/90 hover:text-white"
+                            }`}
+                          >
+                            <span className="text-xl p-1.5 rounded-lg bg-surface-900 border border-white/5 shrink-0">
+                              {item.icon}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-xs font-bold text-white block">{item.label}</span>
+                              <span className="text-[11px] text-surface-200/60 block truncate">{item.desc}</span>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Administrator Preferences */}
+                    <div className="space-y-2 pt-2 border-t border-white/5">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-surface-200/50 px-2">
+                        Admin Account
+                      </p>
+                      <div className="grid grid-cols-1 gap-1.5">
+                        <Link
+                          to="/profile"
+                          onClick={() => setSidebarOpen(false)}
+                          className={`flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                            isActive("/profile")
+                              ? "bg-purple-600/20 text-purple-300 border border-purple-500/40 shadow-sm"
+                              : "hover:bg-white/5 text-surface-200/90 hover:text-white"
+                          }`}
+                        >
+                          <span className="text-xl p-1.5 rounded-lg bg-surface-900 border border-white/5 shrink-0">👤</span>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs font-bold text-white block">Admin Profile</span>
+                            <span className="text-[11px] text-surface-200/60 block truncate">Administrator credentials</span>
+                          </div>
+                        </Link>
+                        <Link
+                          to="/notifications/preferences"
+                          onClick={() => setSidebarOpen(false)}
+                          className={`flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                            isActive("/notifications/preferences")
+                              ? "bg-purple-600/20 text-purple-300 border border-purple-500/40 shadow-sm"
+                              : "hover:bg-white/5 text-surface-200/90 hover:text-white"
+                          }`}
+                        >
+                          <span className="text-xl p-1.5 rounded-lg bg-surface-900 border border-white/5 shrink-0">⚙️</span>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs font-bold text-white block">System Notifications</span>
+                            <span className="text-[11px] text-surface-200/60 block truncate">Platform alert triggers</span>
+                          </div>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
 
                 {/* 1. PERSONAL TRAINER (Topmost Primary Feature - BEFORE Dashboard) */}
                 <div className="space-y-2">
@@ -607,25 +725,10 @@ export default function Navbar() {
                       </div>
                     </Link>
 
-                    {(user?.role === "admin" || user?.is_superuser) && (
-                      <Link
-                        to="/admin"
-                        onClick={() => setSidebarOpen(false)}
-                        className={`flex items-center gap-3 p-2.5 rounded-xl transition-all ${
-                          isActive("/admin")
-                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
-                            : "hover:bg-white/5 text-amber-300/90 hover:text-amber-200"
-                        }`}
-                      >
-                        <span className="text-xl p-1.5 rounded-lg bg-surface-900 border border-white/5 shrink-0">👑</span>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs font-bold text-white block">Admin Dashboard</span>
-                          <span className="text-[11px] text-amber-300/60 block truncate">User & resource administration</span>
-                        </div>
-                      </Link>
-                    )}
                   </div>
                 </div>
+              </>
+            )}
 
               </div>
 

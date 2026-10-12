@@ -6,6 +6,7 @@ Calculates real aggregated statistics and provides administrative management ope
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.exceptions import AppException
 from app.models.coding import CodingSubmission
 from app.models.interview import InterviewEvaluation, InterviewSession
@@ -17,8 +18,10 @@ from app.models.resume import ResumeVersion
 from app.models.resume_analysis import ResumeAnalysis
 from app.models.user import User
 from app.schemas.admin import (
+    AdminAuditLogItem,
     AdminQuestionCreate,
     AdminResourceCreate,
+    AdminSettingsResponse,
     AdminSystemStatsResponse,
     AdminUserResponse,
     AdminUserRoleUpdate,
@@ -176,3 +179,74 @@ async def delete_admin_resource(db: AsyncSession, resource_id: int) -> None:
         raise AppException(message="Resource not found.", status_code=404)
     await db.delete(lr)
     await db.commit()
+
+
+async def get_admin_audit_logs(db: AsyncSession, limit: int = 50) -> list[AdminAuditLogItem]:
+    """Compile real event logs from platform activities for audit trails."""
+    logs: list[AdminAuditLogItem] = []
+
+    # 1. Recent Users
+    u_res = await db.execute(select(User).order_by(User.created_at.desc()).limit(20))
+    for u in u_res.scalars().all():
+        logs.append(
+            AdminAuditLogItem(
+                timestamp=u.created_at,
+                event_type="USER_REGISTERED",
+                description=f"New user registered: {u.name} (Role: {u.role})",
+                actor=u.email,
+            )
+        )
+
+    # 2. Recent Interviews
+    i_res = await db.execute(
+        select(InterviewSession).order_by(InterviewSession.created_at.desc()).limit(20)
+    )
+    for s in i_res.scalars().all():
+        logs.append(
+            AdminAuditLogItem(
+                timestamp=s.created_at,
+                event_type="INTERVIEW_SESSION",
+                description=f"Mock interview started for role '{s.role}' [Status: {s.status}]",
+                actor=f"User ID #{s.user_id}",
+            )
+        )
+
+    # 3. Recent Coding Submissions
+    c_res = await db.execute(
+        select(CodingSubmission).order_by(CodingSubmission.created_at.desc()).limit(20)
+    )
+    for cs in c_res.scalars().all():
+        logs.append(
+            AdminAuditLogItem(
+                timestamp=cs.created_at,
+                event_type="CODING_SUBMISSION",
+                description=f"Code challenge evaluated in {cs.language} [Verdict: {cs.status}]",
+                actor=f"User ID #{cs.user_id}",
+            )
+        )
+
+    # Sort all events chronologically descending
+    logs.sort(key=lambda x: x.timestamp, reverse=True)
+    return logs[:limit]
+
+
+def get_admin_settings() -> AdminSettingsResponse:
+    """Return platform configuration settings safely."""
+    # Mask database URL
+    db_raw = settings.DATABASE_URL
+    masked_db = db_raw
+    if "@" in db_raw:
+        prefix, rest = db_raw.split("@", 1)
+        scheme = prefix.split("://")[0]
+        masked_db = f"{scheme}://***:***@{rest}"
+
+    return AdminSettingsResponse(
+        app_name=settings.APP_NAME,
+        app_version=settings.APP_VERSION,
+        environment=getattr(settings, "ENVIRONMENT", "development"),
+        ollama_model=settings.OLLAMA_MODEL,
+        ollama_base_url=settings.OLLAMA_BASE_URL,
+        jwt_expiration_minutes=settings.JWT_EXPIRATION_MINUTES,
+        database_url_masked=masked_db,
+        registration_enabled=True,
+    )

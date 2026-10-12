@@ -34,7 +34,9 @@ export default function Login() {
 
       if (response.data) {
         login(response.data);
-        navigate(from, { replace: true });
+        const isAdmin = response.data.user?.role === "admin" || response.data.user?.is_superuser;
+        const destination = from !== "/dashboard" ? from : (isAdmin ? "/admin" : "/dashboard");
+        navigate(destination, { replace: true });
       }
     } catch (err) {
       if (err instanceof APIError) {

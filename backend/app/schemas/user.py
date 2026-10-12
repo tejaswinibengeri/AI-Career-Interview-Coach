@@ -103,6 +103,8 @@ class UserResponse(BaseModel):
     id: int
     email: str
     name: str
+    role: str = "user"
+    is_superuser: bool = False
     is_active: bool
     created_at: datetime
     profile: ProfileResponse | None = None

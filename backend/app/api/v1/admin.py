@@ -9,8 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_admin_user, get_db
 from app.models.user import User
 from app.schemas.admin import (
+    AdminAuditLogItem,
     AdminQuestionCreate,
     AdminResourceCreate,
+    AdminSettingsResponse,
     AdminSystemStatsResponse,
     AdminUserResponse,
     AdminUserRoleUpdate,
@@ -24,8 +26,10 @@ from app.services.admin_service import (
     delete_admin_question,
     delete_admin_resource,
     delete_admin_user,
+    get_admin_audit_logs,
     get_admin_questions,
     get_admin_resources,
+    get_admin_settings,
     get_admin_system_statistics,
     get_admin_users,
     update_admin_user,
@@ -230,4 +234,41 @@ async def remove_resource(
         status="success",
         message="Resource deleted successfully.",
         data=None,
+    )
+
+
+@router.get(
+    "/audit-logs",
+    response_model=APIEnvelope[list[AdminAuditLogItem]],
+    status_code=status.HTTP_200_OK,
+    summary="Get recent platform administrative and audit event logs",
+)
+async def get_audit_logs(
+    current_admin: User = Depends(get_current_admin_user),
+    db: AsyncSession = Depends(get_db),
+) -> APIEnvelope[list[AdminAuditLogItem]]:
+    """Fetch chronological security and operational audit records."""
+    logs = await get_admin_audit_logs(db)
+    return APIEnvelope(
+        status="success",
+        message="Audit logs retrieved successfully.",
+        data=logs,
+    )
+
+
+@router.get(
+    "/settings",
+    response_model=APIEnvelope[AdminSettingsResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get platform configuration and AI engine settings",
+)
+async def get_platform_settings(
+    current_admin: User = Depends(get_current_admin_user),
+) -> APIEnvelope[AdminSettingsResponse]:
+    """Fetch current system configuration."""
+    sys_settings = get_admin_settings()
+    return APIEnvelope(
+        status="success",
+        message="Platform settings retrieved.",
+        data=sys_settings,
     )

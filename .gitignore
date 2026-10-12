@@ -69,3 +69,5 @@ logs/
 backend/uploads/resumes/*
 !backend/uploads/resumes/.gitkeep
 
+
+backend/uploads/
