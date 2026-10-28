@@ -4,7 +4,7 @@ Pydantic schemas for authentication and user profile operations.
 
 from datetime import datetime
 from typing import Any, Generic, TypeVar
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 T = TypeVar("T")
 
@@ -20,12 +20,30 @@ class APIEnvelope(BaseModel, Generic[T]):
 # --- Auth Request Schemas ---
 
 
+def validate_password_strength(v: str) -> str:
+    """Enforce password strength requirements (min 8 chars, letter + digit or special)."""
+    if len(v) < 8:
+        raise ValueError("Password must be at least 8 characters long.")
+    if len(v) > 128:
+        raise ValueError("Password must not exceed 128 characters.")
+    if not any(c.isalpha() for c in v):
+        raise ValueError("Password must contain at least one letter.")
+    if not any(c.isdigit() or not c.isalnum() for c in v):
+        raise ValueError("Password must contain at least one digit or special character.")
+    return v
+
+
 class UserRegisterRequest(BaseModel):
     """Payload for user registration."""
 
     name: str = Field(..., min_length=1, max_length=255, description="Full name")
     email: EmailStr = Field(..., description="Valid email address")
-    password: str = Field(..., min_length=6, max_length=128, description="Password (min 6 characters)")
+    password: str = Field(..., min_length=8, max_length=128, description="Password (min 8 characters)")
+
+    @field_validator("password")
+    @classmethod
+    def check_password_strength(cls, v: str) -> str:
+        return validate_password_strength(v)
 
 
 class UserLoginRequest(BaseModel):
@@ -45,14 +63,24 @@ class ResetPasswordRequest(BaseModel):
     """Payload for resetting password with a token."""
 
     token: str = Field(..., min_length=1, description="Password reset token")
-    new_password: str = Field(..., min_length=6, max_length=128, description="New password (min 6 characters)")
+    new_password: str = Field(..., min_length=8, max_length=128, description="New password (min 8 characters)")
+
+    @field_validator("new_password")
+    @classmethod
+    def check_new_password_strength(cls, v: str) -> str:
+        return validate_password_strength(v)
 
 
 class ChangePasswordRequest(BaseModel):
     """Payload for updating password from profile settings."""
 
     current_password: str = Field(..., min_length=1, description="Current password")
-    new_password: str = Field(..., min_length=6, max_length=128, description="New password (min 6 characters)")
+    new_password: str = Field(..., min_length=8, max_length=128, description="New password (min 8 characters)")
+
+    @field_validator("new_password")
+    @classmethod
+    def check_change_password_strength(cls, v: str) -> str:
+        return validate_password_strength(v)
 
 
 # --- Profile Schemas ---

@@ -81,9 +81,19 @@ async def get_admin_users(db: AsyncSession) -> list[AdminUserResponse]:
 
 
 async def update_admin_user(
-    db: AsyncSession, target_user_id: int, payload: AdminUserRoleUpdate
+    db: AsyncSession,
+    target_user_id: int,
+    payload: AdminUserRoleUpdate,
+    current_admin_id: int | None = None,
 ) -> AdminUserResponse:
-    """Update user role or active status."""
+    """Update user role or active status. Prevents admin self-lockout."""
+    if current_admin_id is not None and target_user_id == current_admin_id:
+        if (payload.role is not None and payload.role != "admin") or payload.is_active is False:
+            raise AppException(
+                message="Operation not permitted: Administrators cannot revoke their own admin permissions or deactivate their own account.",
+                status_code=400,
+            )
+
     res = await db.execute(select(User).where(User.id == target_user_id))
     user = res.scalar_one_or_none()
 
@@ -102,8 +112,18 @@ async def update_admin_user(
     return AdminUserResponse.model_validate(user)
 
 
-async def delete_admin_user(db: AsyncSession, target_user_id: int) -> None:
-    """Delete a user from system."""
+async def delete_admin_user(
+    db: AsyncSession,
+    target_user_id: int,
+    current_admin_id: int | None = None,
+) -> None:
+    """Delete a user from system. Prevents admin self-deletion."""
+    if current_admin_id is not None and target_user_id == current_admin_id:
+        raise AppException(
+            message="Operation not permitted: Administrators cannot delete their own active account.",
+            status_code=400,
+        )
+
     res = await db.execute(select(User).where(User.id == target_user_id))
     user = res.scalar_one_or_none()
 

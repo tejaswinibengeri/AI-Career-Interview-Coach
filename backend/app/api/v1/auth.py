@@ -2,11 +2,14 @@
 Authentication API endpoints.
 """
 
+import asyncio
 from fastapi import APIRouter, Depends, status
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db
-from app.core.security import create_access_token
+from app.api.deps import get_current_user, get_db, security_scheme
+from app.core.config import settings
+from app.core.security import create_access_token, revoke_token
 from app.models.user import User
 from app.schemas.user import (
     APIEnvelope,
@@ -84,8 +87,13 @@ async def login(
     status_code=status.HTTP_200_OK,
     summary="Log out of current session",
 )
-async def logout() -> APIEnvelope[None]:
-    """Acknowledge user logout (JWT is statelessly invalidated on client)."""
+async def logout(
+    auth_header: HTTPAuthorizationCredentials | None = Depends(security_scheme),
+) -> APIEnvelope[None]:
+    """Revoke current JWT access token on server and acknowledge user logout."""
+    if auth_header and auth_header.credentials:
+        revoke_token(auth_header.credentials)
+
     return APIEnvelope(
         status="success",
         message="Logged out successfully.",
@@ -120,15 +128,38 @@ async def forgot_password(
     data: ForgotPasswordRequest,
     db: AsyncSession = Depends(get_db),
 ) -> APIEnvelope[ForgotPasswordResponse]:
-    """Generate a password reset token for the given account email."""
+    """Generate a password reset token for the given account email.
+    
+    Protects against user enumeration and does not leak reset tokens in production.
+    """
     user, token = await create_password_reset_token(db, data.email)
+
+    if user and token and settings.SMTP_ENABLED:
+        from app.services.email_service import send_email
+        reset_link = f"http://localhost:5173/reset-password?token={token}"
+        email_html = (
+            f"<div style='font-family: sans-serif;'>"
+            f"<h2>Password Reset Request</h2>"
+            f"<p>Hello {user.name},</p>"
+            f"<p>We received a request to reset your password for your account.</p>"
+            f"<p><a href='{reset_link}' style='padding: 10px 18px; background: #6366f1; color: white; border-radius: 8px; text-decoration: none;'>Reset My Password</a></p>"
+            f"<p>Or copy this link: {reset_link}</p>"
+            f"<p>This token will expire in 1 hour.</p>"
+            f"</div>"
+        )
+        asyncio.create_task(send_email(user.email, "Password Reset Instructions", email_html))
+
+    # Security: In production, NEVER expose the reset token in the HTTP API response.
+    # In development / test environments, allow local verification and test suite flow.
+    is_production = settings.ENVIRONMENT.lower() == "production"
+    safe_token = None if is_production else token
 
     return APIEnvelope(
         status="success",
-        message="Password reset instructions generated successfully.",
+        message="If an account with this email address exists, password reset instructions have been dispatched.",
         data=ForgotPasswordResponse(
-            email=user.email,
-            reset_token=token,
+            email=data.email,
+            reset_token=safe_token,
         ),
     )
 

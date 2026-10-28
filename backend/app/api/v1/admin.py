@@ -89,7 +89,9 @@ async def update_user_role(
     db: AsyncSession = Depends(get_db),
 ) -> APIEnvelope[AdminUserResponse]:
     """Promote/demote user role or toggle active state."""
-    updated = await update_admin_user(db, target_user_id=id, payload=body)
+    updated = await update_admin_user(
+        db, target_user_id=id, payload=body, current_admin_id=current_admin.id
+    )
     return APIEnvelope(
         status="success",
         message="User permissions updated.",
@@ -109,7 +111,7 @@ async def remove_user(
     db: AsyncSession = Depends(get_db),
 ) -> APIEnvelope[None]:
     """Delete user from platform."""
-    await delete_admin_user(db, target_user_id=id)
+    await delete_admin_user(db, target_user_id=id, current_admin_id=current_admin.id)
     return APIEnvelope(
         status="success",
         message="User deleted successfully.",

@@ -19,6 +19,125 @@ logger = logging.getLogger(__name__)
 MAX_EXECUTION_TIME_SECONDS = 3.0
 MAX_OUTPUT_BYTES = 10000
 
+# Strict whitelist of permitted algorithm / standard library modules
+ALLOWED_MODULES = {
+    "math",
+    "collections",
+    "itertools",
+    "heapq",
+    "bisect",
+    "string",
+    "typing",
+    "functools",
+    "re",
+    "random",
+    "json",
+    "datetime",
+}
+
+# Explicitly forbidden function and builtin calls that could bypass sandbox or access system
+FORBIDDEN_CALLS = {
+    "open",
+    "compile",
+    "eval",
+    "exec",
+    "__import__",
+    "globals",
+    "locals",
+    "vars",
+    "input",
+    "breakpoint",
+    "exit",
+    "quit",
+    "help",
+    "getattr",
+    "setattr",
+    "delattr",
+}
+
+# Forbidden dunder attributes used for reflection / sandbox escape
+FORBIDDEN_ATTRIBUTES = {
+    "__subclasses__",
+    "__bases__",
+    "__globals__",
+    "__code__",
+    "__closure__",
+    "__builtins__",
+    "__import__",
+    "__loader__",
+    "__spec__",
+    "__dict__",
+    "__class__",
+    "__mro__",
+}
+
+# Forbidden SQL tokens that could inspect disk or attach external databases
+FORBIDDEN_SQL_KEYWORDS = {
+    "ATTACH",
+    "DETACH",
+    "PRAGMA",
+    "VACUUM",
+    "LOAD_EXTENSION",
+    "ALTER SYSTEM",
+}
+
+
+class SecurityViolationError(Exception):
+    """Raised when submitted code contains prohibited constructs or modules."""
+    pass
+
+
+class ASTSecurityValidator(ast.NodeVisitor):
+    """Inspects candidate AST before execution to prevent RCE, OS access, and sandbox escapes."""
+
+    def visit_Import(self, node: ast.Import) -> None:
+        for alias in node.names:
+            root_module = alias.name.split(".")[0]
+            if root_module not in ALLOWED_MODULES:
+                raise SecurityViolationError(
+                    f"Importing module '{alias.name}' is prohibited in the execution sandbox."
+                )
+        self.generic_visit(node)
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        if node.module:
+            root_module = node.module.split(".")[0]
+            if root_module not in ALLOWED_MODULES:
+                raise SecurityViolationError(
+                    f"Importing from module '{node.module}' is prohibited in the execution sandbox."
+                )
+        self.generic_visit(node)
+
+    def visit_Call(self, node: ast.Call) -> None:
+        if isinstance(node.func, ast.Name) and node.func.id in FORBIDDEN_CALLS:
+            raise SecurityViolationError(
+                f"Calling '{node.func.id}()' is prohibited in the execution sandbox."
+            )
+        elif isinstance(node.func, ast.Attribute) and node.func.attr in FORBIDDEN_CALLS:
+            raise SecurityViolationError(
+                f"Calling method '{node.func.attr}()' is prohibited in the execution sandbox."
+            )
+        self.generic_visit(node)
+
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        if node.attr in FORBIDDEN_ATTRIBUTES:
+            raise SecurityViolationError(
+                f"Accessing restricted attribute '{node.attr}' is prohibited in the execution sandbox."
+            )
+        self.generic_visit(node)
+
+
+def validate_candidate_code_security(code: str) -> None:
+    """Perform AST static security analysis to ensure code cannot perform malicious actions.
+    
+    Raises:
+        SyntaxError: If code cannot be parsed.
+        SecurityViolationError: If code attempts forbidden operations.
+    """
+    tree = ast.parse(code)
+    validator = ASTSecurityValidator()
+    validator.visit(tree)
+
 
 class CodeExecutionResult:
     """Standard container for a single test case execution result."""
@@ -66,9 +185,9 @@ def execute_python_code_in_sandbox(
     Returns:
         tuple: (overall_status, passed_count, total_count, total_time_ms, results_list)
     """
-    # Quick static syntax check before spawning subprocess
+    # 1. Static security & syntax check before spawning subprocess
     try:
-        ast.parse(candidate_code)
+        validate_candidate_code_security(candidate_code)
     except SyntaxError as syn_err:
         results = []
         for idx, tc in enumerate(test_cases):
@@ -82,6 +201,19 @@ def execute_python_code_in_sandbox(
                 )
             )
         return "Syntax Error", 0, len(test_cases), 0.0, results
+    except SecurityViolationError as sec_err:
+        results = []
+        for idx, tc in enumerate(test_cases):
+            results.append(
+                CodeExecutionResult(
+                    test_case_index=idx,
+                    input_data=tc.get("input", ""),
+                    expected_output=tc.get("expected_output", ""),
+                    passed=False,
+                    error_output=f"Security Violation: {sec_err}",
+                )
+            )
+        return "Security Violation", 0, len(test_cases), 0.0, results
 
     results: list[CodeExecutionResult] = []
     passed_count = 0
@@ -95,29 +227,36 @@ def execute_python_code_in_sandbox(
         with tempfile.TemporaryDirectory() as temp_dir:
             script_path = os.path.join(temp_dir, "solution.py")
 
-            # Wrapper code to parse inputs, invoke function, and print output
+            # Safely encode the test input string as a JSON string literal
+            encoded_input_json = json.dumps(input_str)
+
+            # Wrapper code to parse inputs safely, invoke function, and print output
             runner_wrapper = f"""# Isolated Sandbox Script
+import ast
 import json
 import sys
 
+# Candidate code submitted by user
 {candidate_code}
 
 # Test invocation harness
 if __name__ == '__main__':
     try:
-        # Parse inputs from harness
-        raw_input = \"\"\"{input_str}\"\"\"
+        raw_input = {encoded_input_json}
         lines = [line.strip() for line in raw_input.strip().split('\\n') if line.strip()]
         
-        # Call available defined entry point functions in solution scope
-        funcs = [v for k, v in list(globals().items()) if callable(v) and not k.startswith('_') and k != 'json']
+        # Locate candidate entry point function
+        funcs = [
+            v for k, v in list(globals().items())
+            if callable(v) and not k.startswith('_') and k not in ('json', 'ast', 'sys')
+        ]
         if not funcs:
             print("No function definition found.", file=sys.stderr)
             sys.exit(1)
         
         target_fn = funcs[-1]
         
-        # Evaluate arguments from lines
+        # Parse arguments safely using literal_eval (no arbitrary eval)
         args = []
         for line in lines:
             if '=' in line:
@@ -125,7 +264,7 @@ if __name__ == '__main__':
             else:
                 val_part = line.strip()
             try:
-                args.append(eval(val_part, {{"__builtins__": None}}, {{}}))
+                args.append(ast.literal_eval(val_part))
             except Exception:
                 args.append(val_part)
                 
@@ -223,6 +362,22 @@ def execute_sql_code_in_sandbox(
     Returns:
         tuple: (overall_status, passed_count, total_count, total_time_ms, results_list)
     """
+    # Security check on candidate SQL statement
+    upper_sql = candidate_sql.upper()
+    for kw in FORBIDDEN_SQL_KEYWORDS:
+        if kw in upper_sql:
+            sec_res = [
+                CodeExecutionResult(
+                    test_case_index=idx,
+                    input_data=tc.get("input", "SQL Dataset Query"),
+                    expected_output=str(tc.get("expected_output", "")).strip(),
+                    passed=False,
+                    error_output=f"Security Violation: SQL command '{kw}' is not permitted in sandbox.",
+                )
+                for idx, tc in enumerate(test_cases)
+            ]
+            return "Security Violation", 0, len(test_cases), 0.0, sec_res
+
     results: list[CodeExecutionResult] = []
     passed_count = 0
     total_time_ms = 0.0

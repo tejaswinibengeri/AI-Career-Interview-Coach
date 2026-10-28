@@ -18,6 +18,12 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
 from app.db.session import engine
 
+from app.core.middleware import (
+    RateLimitMiddleware,
+    RequestSizeLimitMiddleware,
+    SecurityHeadersMiddleware,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -105,13 +111,23 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # --- Security Middlewares ---
+    application.add_middleware(SecurityHeadersMiddleware)
+    application.add_middleware(RequestSizeLimitMiddleware)
+    application.add_middleware(RateLimitMiddleware)
+
     # --- CORS ---
+    cors_origin_regex = (
+        r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
+        if settings.ENVIRONMENT.lower() != "production"
+        else None
+    )
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
-        allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+        allow_origin_regex=cors_origin_regex,
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
 

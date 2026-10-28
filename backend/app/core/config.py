@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     # --- Application ---
     APP_NAME: str = "AI Career & Interview Coach"
     APP_VERSION: str = "0.1.0"
+    ENVIRONMENT: str = "development"
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
 
@@ -32,6 +33,8 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "change-me-to-a-random-secret-in-production"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_MINUTES: int = 30
+    RATE_LIMIT_ENABLED: bool = True
+    MAX_REQUEST_BODY_BYTES: int = 15 * 1024 * 1024  # 15 MB
 
     # --- Ollama AI ---
     OLLAMA_BASE_URL: str = "http://localhost:11434"
@@ -100,6 +103,19 @@ class Settings(BaseSettings):
             abs_db = (backend_dir / rel_part).resolve()
             prefix = v.split("///./")[0] + "///"
             return f"{prefix}{abs_db.as_posix()}"
+        return v
+
+    @field_validator("JWT_SECRET", mode="after")
+    @classmethod
+    def validate_jwt_secret(cls, v: str, info) -> str:
+        # Require strong non-placeholder secrets in production
+        import os
+        env = os.getenv("ENVIRONMENT", "development").lower()
+        if env == "production":
+            if v == "change-me-to-a-random-secret-in-production" or len(v) < 32:
+                raise ValueError(
+                    "Insecure JWT_SECRET: In production, JWT_SECRET must be at least 32 characters and cannot use default placeholders."
+                )
         return v
 
     @field_validator("UPLOAD_DIR", mode="after")

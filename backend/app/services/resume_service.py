@@ -156,6 +156,17 @@ async def get_resume_file_for_download(
             status_code=404,
         )
 
+    # Prevent path traversal outside storage directory
+    file_path_obj = Path(target_version.file_path).resolve()
+    base_upload_dir = Path(settings.UPLOAD_DIR).resolve()
+    try:
+        file_path_obj.relative_to(base_upload_dir)
+    except ValueError:
+        raise AppException(
+            message="Forbidden: File access outside authorized storage directory.",
+            status_code=403,
+        )
+
     return target_version.file_path, target_version.filename, target_version.mime_type
 
 

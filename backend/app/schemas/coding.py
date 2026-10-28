@@ -21,6 +21,14 @@ class SubmitCodeRequest(BaseModel):
     language: str = Field("python", description="python or sql")
 
 
+class GenerateChallengeRequest(BaseModel):
+    """Payload for generating a custom AI coding challenge."""
+
+    topic: str = Field("Algorithms", min_length=2, max_length=100, description="Topic or algorithm concept")
+    category: str = Field("Python", min_length=2, max_length=50, description="Language / category (Python, SQL, DSA)")
+    difficulty: str = Field("Medium", min_length=3, max_length=20, description="Difficulty level (Easy, Medium, Hard)")
+
+
 class CodingResultResponse(BaseModel):
     """Response schema for individual test case execution result."""
 

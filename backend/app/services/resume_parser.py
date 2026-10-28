@@ -18,8 +18,10 @@ ALLOWED_MIME_TYPES = {
 }
 
 
-def validate_file_metadata(filename: str, content_type: str, file_size: int) -> str:
-    """Validate filename extension, MIME type, and size.
+def validate_file_metadata(
+    filename: str, content_type: str, file_size: int, content: bytes | None = None
+) -> str:
+    """Validate filename extension, MIME type, size, and magic byte signatures.
 
     Returns normalized file extension ('pdf' or 'docx').
     """
@@ -58,6 +60,21 @@ def validate_file_metadata(filename: str, content_type: str, file_size: int) -> 
             status_code=400,
         )
 
+    # Magic byte signature check
+    if content:
+        if ext == ".pdf":
+            if not (content.startswith(b"%PDF-") or b"%PDF-" in content[:1024]):
+                raise AppException(
+                    message="Invalid file content: Missing %PDF- signature for PDF document.",
+                    status_code=400,
+                )
+        elif ext == ".docx":
+            if not content.startswith(b"PK\x03\x04"):
+                raise AppException(
+                    message="Invalid file content: Missing standard ZIP signature for DOCX document.",
+                    status_code=400,
+                )
+
     return ext.lstrip(".")
 
 
@@ -80,6 +97,13 @@ def extract_text_from_pdf(content: bytes) -> str:
             status_code=400,
         )
 
+    if len(doc) > 50:
+        doc.close()
+        raise AppException(
+            message="PDF exceeds maximum allowed page count (50 pages).",
+            status_code=400,
+        )
+
     extracted_pages: list[str] = []
     for page_num in range(len(doc)):
         try:
@@ -99,7 +123,7 @@ def extract_text_from_pdf(content: bytes) -> str:
             status_code=400,
         )
 
-    return full_text
+    return full_text[:500000]
 
 
 def extract_text_from_docx(content: bytes) -> str:
@@ -135,12 +159,12 @@ def extract_text_from_docx(content: bytes) -> str:
             status_code=400,
         )
 
-    return full_text
+    return full_text[:500000]
 
 
 def process_and_extract_resume(filename: str, content_type: str, content: bytes) -> tuple[str, str]:
     """Validate file metadata, perform integrity parsing, and return (file_type, extracted_text)."""
-    file_type = validate_file_metadata(filename, content_type, len(content))
+    file_type = validate_file_metadata(filename, content_type, len(content), content=content)
 
     if file_type == "pdf":
         extracted_text = extract_text_from_pdf(content)

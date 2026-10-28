@@ -102,11 +102,11 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
     return result.scalar_one_or_none()
 
 
-async def create_password_reset_token(db: AsyncSession, email: str) -> tuple[User, str]:
-    """Generate and persist a password reset token for a user.
+async def create_password_reset_token(db: AsyncSession, email: str) -> tuple[User | None, str | None]:
+    """Generate and persist a password reset token for a user if they exist.
 
-    Raises:
-        AppException: If user is not found.
+    Returns:
+        tuple[User | None, str | None]: The user and generated token if found, else (None, None).
     """
     normalized_email = email.strip().lower()
     query = select(User).where(User.email == normalized_email)
@@ -114,10 +114,7 @@ async def create_password_reset_token(db: AsyncSession, email: str) -> tuple[Use
     user = result.scalar_one_or_none()
 
     if not user:
-        raise AppException(
-            message="No account found with this email address.",
-            status_code=404,
-        )
+        return None, None
 
     token = generate_reset_token()
     user.reset_token = token

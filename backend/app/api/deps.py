@@ -10,7 +10,7 @@ from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.core.security import decode_access_token
+from app.core.security import decode_access_token, is_token_revoked
 from app.db.session import get_async_session
 from app.models.user import User
 from app.services.auth_service import get_user_by_id
@@ -40,6 +40,11 @@ async def get_current_user(
         )
 
     token = auth_header.credentials
+    if is_token_revoked(token):
+        raise AppException(
+            message="Token has been revoked or session logged out.",
+            status_code=401,
+        )
     try:
         payload = decode_access_token(token)
         user_id_raw = payload.get("sub")

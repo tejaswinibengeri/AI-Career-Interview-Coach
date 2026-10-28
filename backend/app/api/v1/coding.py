@@ -12,6 +12,7 @@ from app.schemas.coding import (
     AIHintResponse,
     CodingChallengeResponse,
     CodingSubmissionResponse,
+    GenerateChallengeRequest,
     SubmitCodeRequest,
 )
 from app.schemas.user import APIEnvelope
@@ -57,17 +58,15 @@ async def get_challenges(
     summary="Generate a custom AI coding challenge",
 )
 async def generate_custom_challenge(
-    payload: dict = Body(...),
+    payload: GenerateChallengeRequest = Body(...),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> APIEnvelope[CodingChallengeResponse]:
     """Generate a custom coding problem using AI for a specific topic/skill."""
-    topic = payload.get("topic", "Algorithms")
-    category = payload.get("category", "Python")
-    difficulty = payload.get("difficulty", "Medium")
-
     from app.services.coding_service import generate_ai_coding_challenge
-    challenge = await generate_ai_coding_challenge(db, topic=topic, category=category, difficulty=difficulty)
+    challenge = await generate_ai_coding_challenge(
+        db, topic=payload.topic, category=payload.category, difficulty=payload.difficulty
+    )
     return APIEnvelope(
         status="success",
         message="Custom AI coding challenge generated successfully.",
