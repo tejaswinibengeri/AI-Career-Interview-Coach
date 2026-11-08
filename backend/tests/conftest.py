@@ -31,11 +31,22 @@ TestSessionLocal = async_sessionmaker(
 @pytest.fixture(autouse=True)
 async def setup_test_db():
     """Create fresh database tables before each test and drop them after."""
+    from app.core.config import settings
+    from app.core.security import _revoked_tokens
+    
+    # Store and ensure tests always run against local/mock AI provider without hitting real external API
+    orig_gemini_key = settings.GEMINI_API_KEY
+    settings.GEMINI_API_KEY = ""
+    _revoked_tokens.clear()
+
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+        
+    _revoked_tokens.clear()
+    settings.GEMINI_API_KEY = orig_gemini_key
 
 
 @pytest.fixture
