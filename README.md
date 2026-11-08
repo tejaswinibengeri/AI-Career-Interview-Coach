@@ -7,13 +7,14 @@
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC.svg?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0_Async-D71F00.svg?style=flat&logo=sqlalchemy&logoColor=white)](https://www.sqlalchemy.org)
 [![Ollama](https://img.shields.io/badge/Ollama-Offline_AI-black.svg?style=flat&logo=ollama&logoColor=white)](https://ollama.ai)
+[![Gemini](https://img.shields.io/badge/Gemini_3.8_Flash-Cloud_AI-4285F4.svg?style=flat&logo=google&logoColor=white)](https://aistudio.google.com)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
 [![Pytest](https://img.shields.io/badge/Pytest-135_Passed-brightgreen.svg?style=flat&logo=pytest&logoColor=white)](https://pytest.org)
 [![Security](https://img.shields.io/badge/Security-OWASP_ASVS_L2-blue.svg?style=flat&logo=owasp&logoColor=white)](https://owasp.org)
 [![NPM Audit](https://img.shields.io/badge/NPM_Audit-0_Vulnerabilities-brightgreen.svg?style=flat&logo=npm&logoColor=white)](https://www.npmjs.com)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat)](LICENSE)
 
-An enterprise-grade, offline-capable **AI Career Acceleration, Resume Studio, Job Market Intelligence, Voice Mock Interview, and Technical Placement Readiness Platform**. Engineered with **FastAPI**, **React 19**, **TypeScript**, **SQLAlchemy 2.0 Async**, and local **Ollama LLM** inference for zero cloud costs, absolute data privacy, defense-in-depth security, and mathematically grounded evaluation.
+An enterprise-grade, hybrid-capable **AI Career Acceleration, Resume Studio, Job Market Intelligence, Voice Mock Interview, and Technical Placement Readiness Platform**. Engineered with **FastAPI**, **React 19**, **TypeScript**, **SQLAlchemy 2.0 Async**, with dual AI engine support: high-precision cloud inference via **Google Gemini 3.8 Flash** and local offline inference via **Ollama LLM** for absolute data privacy, defense-in-depth security, and mathematically grounded evaluation.
 
 ---
 
@@ -49,10 +50,12 @@ Traditional placement preparation suffers from severe structural inefficiencies:
 - **Execution Friction & Goal Drift:** Candidates struggle to decompose career goals into structured daily micro-workloads, leading to burnout and abandonment.
 
 ### 1.3 The Placement AI Solution
-Placement AI unites **deterministic mathematical scoring** with **private, offline AI narration**:
+Placement AI unites **deterministic mathematical scoring** with **hybrid AI intelligence (Gemini 3.8 Flash + Ollama)**:
 - **Zero-Hallucination Metrics:** All evaluation scores (ATS scores, skill match percentages, mock interview rubrics, placement readiness index) are calculated using auditable mathematical formulas and linear combinations. The LLM is strictly used for pedagogical feedback, structured entity extraction, and contextual narration.
-- **100% Offline & Privacy-Preserving:** Powered by locally hosted **Ollama** runtimes (`llama3.2:3b`, `llama3`, `mistral`). Candidate resumes, interview voice recordings, transcripts, and source code submissions never leave the host machine.
-- **Resilient Fallback Heuristics:** Built-in semantic fallbacks ensure that every single module continues functioning seamlessly even when the local LLM is temporarily offline or uninstalled.
+- **Dual AI Engine Architecture (Gemini 3.8 Flash & Ollama):**
+  - **Google Gemini 3.8 Flash:** Ultra-high accuracy, fully dynamic role adaptation, and zero guessing enabled whenever `GEMINI_API_KEY` is present.
+  - **Local Ollama Fallback:** Runs locally with `llama3.2:3b` / `llama3` for 100% offline usage, air-gapped environments, and zero cloud API requirements.
+- **Resilient Fallback Heuristics:** Built-in semantic fallbacks ensure that every single module continues functioning seamlessly even when external AI services are temporarily unreachable.
 - **Enterprise-Grade Security:** Hardened to OWASP ASVS Level 2 standards with strict AST code execution sandboxing, server-side JWT revocation, sliding-window rate limiting, payload bounds, magic byte verification, and row-level multi-tenancy.
 
 ---
@@ -746,6 +749,8 @@ docker-compose ps
 | `MAX_REQUEST_BODY_BYTES` | `2097152` (2 MB) | Integer | Maximum permissible request body size for JSON payloads |
 | `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | URL | Local inference gateway endpoint |
 | `OLLAMA_MODEL` | `llama3.2:3b` | String | Active open-weights model identifier |
+| `GEMINI_API_KEY` | *(Empty / Optional)* | Secret | Google Gemini API key. When set, powers Gemini 3.8 Flash |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | String | Active Gemini model identifier |
 | `ADZUNA_APP_ID` | `your_adzuna_app_id` | String | Adzuna live job market API client ID |
 | `ADZUNA_APP_KEY` | `your_adzuna_app_key` | Secret | Adzuna live job market API client secret |
 | `SMTP_ENABLED` | `false` (`true` in prod) | Boolean | Toggles background automated email scheduling |
