@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
 from app.core.config import settings
-from app.integrations.ai.ollama import OllamaProvider
+from app.integrations.ai import get_ai_provider
 from app.schemas.common import APIResponse, HealthData
 
 router = APIRouter()
@@ -34,14 +34,14 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> APIResponse[Health
         logger.error("Database health check failed: %s", exc)
         db_status = "unavailable"
 
-    # --- Ollama check ---
-    ollama_status = "unavailable"
+    # --- AI check (Gemini or Ollama) ---
+    ai_status = "unavailable"
     try:
-        provider = OllamaProvider()
+        provider = get_ai_provider()
         if await provider.health_check():
-            ollama_status = "connected"
+            ai_status = "connected"
     except Exception as exc:
-        logger.warning("Ollama health check failed: %s", exc)
+        logger.warning("AI health check failed: %s", exc)
 
     # --- Overall status ---
     overall = "healthy" if db_status == "connected" else "degraded"
@@ -50,7 +50,7 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> APIResponse[Health
         status=overall,
         version=settings.APP_VERSION,
         database=db_status,
-        ollama=ollama_status,
+        ollama=ai_status,
     )
 
     return APIResponse[HealthData](

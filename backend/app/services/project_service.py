@@ -9,7 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.integrations.ai.ollama import OllamaProvider
+from app.integrations.ai import get_ai_provider
+from app.integrations.ai.base import AIProvider
 from app.models.career import SkillGapReport
 from app.models.project_recommendation import ProjectRecommendation
 from app.models.roadmap import Roadmap
@@ -79,7 +80,7 @@ RULES:
 async def generate_personalized_project_recommendations(
     db: AsyncSession,
     user: User,
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> list[ProjectRecommendationResponse]:
     """Gather candidate actual DB context (skills, target role, skill gaps, roadmap) and generate Ollama project recommendations."""
     # 1. Fetch Profile
@@ -115,7 +116,7 @@ async def generate_personalized_project_recommendations(
     roadmap = rm_res.scalars().first()
     roadmap_summary = f"Roadmap for {roadmap.target_role}" if roadmap else f"Target roadmap for {target_role}"
 
-    provider = ai_provider or OllamaProvider()
+    provider = ai_provider or get_ai_provider()
     prompt = PROJECT_RECOMMENDATION_PROMPT.format(
         target_role=target_role,
         current_role=current_role,

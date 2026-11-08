@@ -11,7 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.integrations.ai.ollama import OllamaProvider
+from app.integrations.ai import get_ai_provider
+from app.integrations.ai.base import AIProvider
 from app.models.interview import (
     InterviewAnswer,
     InterviewEvaluation,
@@ -144,7 +145,7 @@ async def create_interview_session(
     db: AsyncSession,
     user: User,
     request: CreateInterviewSessionRequest,
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> InterviewSessionResponse:
     """Create new mock interview session and select/generate role-aligned questions."""
     await seed_standard_questions_if_empty(db)
@@ -253,7 +254,7 @@ async def submit_and_evaluate_answer(
     session_id: int,
     question_id: int,
     user_answer: str,
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> InterviewSessionResponse:
     """Evaluate candidate answer using Ollama against 6-metric rubric and advance session progress."""
     res = await db.execute(
@@ -281,7 +282,7 @@ async def submit_and_evaluate_answer(
         raise AppException(message="Invalid question for this session.", status_code=404)
 
     # Formulate evaluation prompt
-    provider = ai_provider or OllamaProvider()
+    provider = ai_provider or get_ai_provider()
     prompt = EVALUATE_ANSWER_PROMPT_TEMPLATE.format(
         role=session.role,
         difficulty=session.difficulty,

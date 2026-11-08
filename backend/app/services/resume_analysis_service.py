@@ -10,7 +10,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.integrations.ai.ollama import OllamaProvider
+from app.integrations.ai import get_ai_provider
+from app.integrations.ai.base import AIProvider
 from app.models.resume import Resume, ResumeVersion
 from app.models.resume_analysis import ResumeAnalysis, ResumeSkill
 from app.models.user import User
@@ -178,7 +179,7 @@ async def analyze_user_resume(
     resume_id: int,
     version_id: int | None = None,
     force: bool = False,
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> ResumeAnalysis:
     """Perform AI analysis on user's resume text using Ollama.
 
@@ -222,7 +223,7 @@ async def analyze_user_resume(
         if existing_analysis and existing_analysis.strengths and len(existing_analysis.strengths) > 0 and existing_analysis.weaknesses and len(existing_analysis.weaknesses) > 0:
             return existing_analysis
 
-    provider = ai_provider or OllamaProvider()
+    provider = ai_provider or get_ai_provider()
 
     prompt = ANALYSIS_PROMPT_TEMPLATE.format(resume_text=target_version.extracted_text[:4000])
 

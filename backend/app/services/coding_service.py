@@ -9,7 +9,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.integrations.ai.ollama import OllamaProvider
+from app.integrations.ai import get_ai_provider
+from app.integrations.ai.base import AIProvider
 from app.models.coding import CodingChallenge, CodingResult, CodingSubmission
 from app.models.user import User
 from app.schemas.coding import (
@@ -385,7 +386,7 @@ async def generate_ai_coding_challenge(
     topic: str,
     category: str = "Python",
     difficulty: str = "Medium",
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> CodingChallengeResponse:
     """Generate a custom coding challenge using Ollama AI or robust topic fallbacks."""
     import re, time, uuid
@@ -396,7 +397,7 @@ async def generate_ai_coding_challenge(
     clean_diff = difficulty.strip() if difficulty else "Medium"
     lang = "sql" if clean_cat.lower() == "sql" else "python"
 
-    provider = ai_provider or OllamaProvider()
+    provider = ai_provider or get_ai_provider()
     prompt = GENERATE_CODING_PROMPT.format(topic=clean_topic, category=clean_cat, difficulty=clean_diff)
 
     parsed = None
@@ -697,7 +698,7 @@ async def generate_ai_hint(
     user: User,
     challenge_id: int,
     code: str,
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> AIHintResponse:
     """Generate Ollama AI hint and code explanation (Ollama is NOT the authority for test execution)."""
     ch_res = await db.execute(select(CodingChallenge).where(CodingChallenge.id == challenge_id))
@@ -706,7 +707,7 @@ async def generate_ai_hint(
     if not ch:
         raise AppException(message="Coding challenge not found.", status_code=404)
 
-    provider = ai_provider or OllamaProvider()
+    provider = ai_provider or get_ai_provider()
     prompt = AI_CODING_HINT_PROMPT.format(
         title=ch.title,
         category=ch.category,

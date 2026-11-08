@@ -11,7 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.integrations.ai.ollama import OllamaProvider
+from app.integrations.ai import get_ai_provider
+from app.integrations.ai.base import AIProvider
 from app.models.company_prep import CompanyPrepPlan
 from app.models.user import User
 from app.schemas.company_prep import CompanyPrepResponse, GenerateCompanyPrepRequest
@@ -146,7 +147,7 @@ async def generate_company_prep_plan(
     db: AsyncSession,
     user: User,
     request: GenerateCompanyPrepRequest,
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> CompanyPrepResponse:
     """Generate or retrieve company-specific interview preparation plan."""
     c_key = request.company_name.strip().lower()
@@ -163,7 +164,7 @@ async def generate_company_prep_plan(
     from app.integrations.ai.json_utils import extract_and_parse_json
     from app.services.company_questions_bank import get_curated_company_questions
 
-    provider = ai_provider or OllamaProvider()
+    provider = ai_provider or get_ai_provider()
     prompt = COMPANY_PREP_PROMPT.format(
         company_name=request.company_name,
         target_role=request.target_role,

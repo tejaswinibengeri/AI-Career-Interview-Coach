@@ -14,7 +14,8 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.integrations.ai.ollama import OllamaProvider
+from app.integrations.ai import get_ai_provider
+from app.integrations.ai.base import AIProvider
 from app.models.question import Question, SavedQuestion
 from app.models.user import User
 from app.schemas.question import (
@@ -675,10 +676,10 @@ async def generate_ai_questions(
     db: AsyncSession,
     user: User,
     request: GenerateQuestionsRequest,
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> list[QuestionResponse]:
     """Generate personalized practice questions via Ollama or robust AI question synthesis."""
-    provider = ai_provider or OllamaProvider()
+    provider = ai_provider or get_ai_provider()
     prompt = GENERATE_QUESTIONS_PROMPT.format(
         count=request.count,
         role=request.role,

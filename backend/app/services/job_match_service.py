@@ -11,7 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.integrations.ai.ollama import OllamaProvider
+from app.integrations.ai import get_ai_provider
+from app.integrations.ai.base import AIProvider
 from app.models.job import Job
 from app.models.job_match import JobMatch
 from app.models.resume import Resume
@@ -96,7 +97,7 @@ async def match_resume_to_job(
     user: User,
     job_id: int,
     resume_id: int | None = None,
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> JobMatchResponse:
     """Calculate deterministic match between user resume/profile and real job listing, then generate AI explanation."""
     job_resp = await get_job_by_id(db, job_id=job_id, user_id=user.id)
@@ -131,7 +132,7 @@ async def match_resume_to_job(
     missing_str = ", ".join(missing_skills) or "None"
     edu_str = profile.degree or profile.education or "Undergraduate"
 
-    provider = ai_provider or OllamaProvider()
+    provider = ai_provider or get_ai_provider()
     prompt = JOB_MATCH_PROMPT_TEMPLATE.format(
         job_title=job_resp.title,
         job_company=job_resp.company,

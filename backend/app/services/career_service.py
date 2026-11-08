@@ -8,7 +8,8 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.integrations.ai.ollama import OllamaProvider
+from app.integrations.ai import get_ai_provider
+from app.integrations.ai.base import AIProvider
 from app.integrations.careers.onet import ONET_DATASET, ONetCareerProvider
 from app.models.career import (
     CareerGoal,
@@ -172,7 +173,7 @@ async def generate_skill_gap_report(
     db: AsyncSession,
     user: User,
     occupation_id: int,
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> SkillGapReport:
     """Compare user's real skills against O*NET occupation requirements and generate AI report."""
     occupation = await get_occupation_by_id(db, occupation_id)
@@ -223,7 +224,7 @@ async def generate_skill_gap_report(
     strong_list_str = ", ".join([s["name"] for s in strong_skills + intermediate_skills]) or "None yet"
     missing_list_str = ", ".join([s["name"] for s in missing_skills]) or "None"
 
-    provider = ai_provider or OllamaProvider()
+    provider = ai_provider or get_ai_provider()
     prompt = SKILL_GAP_PROMPT_TEMPLATE.format(
         occupation_title=occupation.title,
         occupation_description=occupation.description,

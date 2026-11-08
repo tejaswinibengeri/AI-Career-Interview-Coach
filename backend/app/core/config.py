@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     """Application-wide settings loaded from environment / .env file."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "backend/.env", "../.env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     # --- Ollama AI ---
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3"
+
+    # --- Google Gemini AI ---
+    # Set GEMINI_API_KEY to switch from Ollama → Gemini automatically.
+    # Leave empty (or omit) to keep using Ollama as the AI backend.
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-3.8-flash"
 
     # --- Storage / Uploads ---
     UPLOAD_DIR: str = "uploads"

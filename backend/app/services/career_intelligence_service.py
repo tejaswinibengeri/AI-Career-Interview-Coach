@@ -11,7 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.integrations.ai.ollama import OllamaProvider
+from app.integrations.ai import get_ai_provider
+from app.integrations.ai.base import AIProvider
 from app.models.career_intelligence import ColdEmail, CoverLetter, ResumeJdMatch
 from app.models.resume import Resume, ResumeVersion
 from app.models.user import User
@@ -89,14 +90,14 @@ Respond ONLY with valid JSON matching this exact structure:
 
 async def analyze_job_description(
     payload: JobDescriptionAnalyzeRequest,
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> JobDescriptionAnalysisResponse:
     """Extract structured skills, requirements, and keywords from a raw job description using Ollama."""
     jd_text = payload.job_description.strip()
     if len(jd_text) < 20:
         raise AppException("Job description is too short to analyze.", status_code=400)
 
-    provider = ai_provider or OllamaProvider()
+    provider = ai_provider or get_ai_provider()
     prompt = JD_ANALYZE_PROMPT.format(job_description=jd_text[:12000])
 
     try:
@@ -206,7 +207,7 @@ async def match_resume_to_jd(
     db: AsyncSession,
     user: User,
     payload: ResumeJdMatchRequest,
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> ResumeJdMatchResponse:
     """Compare a candidate's uploaded resume with a target Job Description and save to database."""
     # 1. Fetch Resume & Current Version
@@ -252,7 +253,7 @@ async def match_resume_to_jd(
             target_occupation_title = occ.title
 
     # 3. Query Ollama for AI Match
-    provider = ai_provider or OllamaProvider()
+    provider = ai_provider or get_ai_provider()
     prompt = RESUME_JD_MATCH_PROMPT.format(
         resume_text=version.extracted_text[:10000],
         job_description=payload.job_description.strip()[:10000],
@@ -443,7 +444,7 @@ async def generate_cover_letter(
     db: AsyncSession,
     user: User,
     payload: CoverLetterGenerateRequest,
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> CoverLetterResponse:
     """Generate a cover letter strictly grounded in the candidate's real resume and the supplied JD."""
     # 1. Fetch Resume & Extracted Text
@@ -477,7 +478,7 @@ async def generate_cover_letter(
         )
 
     # 2. Call Ollama
-    provider = ai_provider or OllamaProvider()
+    provider = ai_provider or get_ai_provider()
     prompt = COVER_LETTER_PROMPT.format(
         resume_text=version.extracted_text[:10000],
         job_title=payload.job_title.strip(),
@@ -632,7 +633,7 @@ async def generate_cold_email(
     db: AsyncSession,
     user: User,
     payload: ColdEmailGenerateRequest,
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> ColdEmailResponse:
     """Generate a personalized cold outreach email strictly grounded in candidate data and job context."""
     # 1. Candidate Background (Resume or Profile)
@@ -733,7 +734,7 @@ async def generate_cold_email(
     )
 
     # 5. Query Ollama with JSON output expectation and retry fallback
-    provider = ai_provider or OllamaProvider()
+    provider = ai_provider or get_ai_provider()
     parsed: dict = {}
     try:
         raw = await provider.generate(
@@ -821,7 +822,7 @@ async def generate_cold_email(
 
 async def regenerate_cold_email_subject(
     payload: ColdEmailRegenerateSubjectRequest,
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> ColdEmailRegenerateSubjectResponse:
     """Generate a crisp, refreshed subject line using Ollama without altering the email body."""
     prompt = REGENERATE_SUBJECT_PROMPT.format(
@@ -832,7 +833,7 @@ async def regenerate_cold_email_subject(
         email_type=payload.email_type,
     )
 
-    provider = ai_provider or OllamaProvider()
+    provider = ai_provider or get_ai_provider()
     try:
         raw = await provider.generate(
             prompt=prompt,

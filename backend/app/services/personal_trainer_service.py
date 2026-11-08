@@ -18,7 +18,8 @@ from sqlalchemy.orm import selectinload
 from app.core.config import settings
 from app.core.exceptions import AppException
 from app.integrations.ai.json_utils import extract_and_parse_json
-from app.integrations.ai.ollama import OllamaProvider
+from app.integrations.ai import get_ai_provider
+from app.integrations.ai.base import AIProvider
 from app.models.personal_trainer import (
     PersonalTrainerSettings,
     TrainingDay,
@@ -320,7 +321,7 @@ Ensure EVERY day has granular tasks with estimated_minutes that sum to <= {max_d
 
     parsed_plan = None
     try:
-        provider = OllamaProvider()
+        provider = get_ai_provider()
         is_healthy = await provider.health_check()
         if is_healthy:
             full_prompt = (

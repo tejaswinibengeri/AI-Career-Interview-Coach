@@ -12,7 +12,8 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException
-from app.integrations.ai.ollama import OllamaProvider
+from app.integrations.ai import get_ai_provider
+from app.integrations.ai.base import AIProvider
 from app.models.career import CareerGoal, Occupation, SkillGapReport
 from app.models.roadmap import Roadmap, RoadmapItem, RoadmapProgress
 from app.models.user import User
@@ -287,7 +288,7 @@ async def generate_user_roadmap(
     user: User,
     occupation_id: int | None = None,
     custom_query: str | None = None,
-    ai_provider: OllamaProvider | None = None,
+    ai_provider: AIProvider | None = None,
 ) -> RoadmapResponse:
     """Generate personalized career roadmap using Ollama AI and user state or custom search prompt."""
     if custom_query and custom_query.strip():
@@ -326,7 +327,7 @@ async def generate_user_roadmap(
     current_skills_str = ", ".join(list(user_skills)[:10]) or "General Programming"
     missing_skills_str = ", ".join(missing_skills_names[:10]) or f"Core competencies for {target_role_title}"
 
-    provider = ai_provider or OllamaProvider()
+    provider = ai_provider or get_ai_provider()
     prompt = ROADMAP_PROMPT_TEMPLATE.format(
         target_role=target_role_title,
         current_skills_list=current_skills_str,
