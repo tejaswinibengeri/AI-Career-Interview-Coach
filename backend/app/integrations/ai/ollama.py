@@ -265,5 +265,9 @@ class OllamaProvider(AIProvider):
             raise RuntimeError(
                 f"Ollama generation failed with status {exc.response.status_code}"
             ) from exc
+        except (OverflowError, ExceptionGroup) as exc:
+            raise ConnectionError(
+                f"Cannot connect to Ollama at {self.base_url}. Check the URL and port."
+            ) from exc
         except Exception as exc:
             raise RuntimeError(f"Ollama generation error: {exc}") from exc

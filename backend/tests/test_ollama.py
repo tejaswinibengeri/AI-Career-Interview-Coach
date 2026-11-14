@@ -18,7 +18,7 @@ async def test_ollama_health_check_handles_unreachable():
 @pytest.mark.asyncio
 async def test_ollama_generate_raises_when_unavailable():
     """OllamaProvider.generate() should raise ConnectionError when Ollama is down."""
-    provider = OllamaProvider(base_url="http://localhost:99999", timeout=2.0)
+    provider = OllamaProvider(base_url="http://127.0.0.1:1", timeout=2.0)
     with pytest.raises(ConnectionError):
         await provider.generate("Hello")
 
