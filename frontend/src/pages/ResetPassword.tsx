@@ -21,8 +21,13 @@ export default function ResetPassword() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setError("New password must be at least 6 characters.");
+    if (newPassword.length < 8) {
+      setError("New password must be at least 8 characters long.");
+      return;
+    }
+
+    if (!/[A-Za-z]/.test(newPassword) || !/[0-9\W]/.test(newPassword)) {
+      setError("Password must contain at least one letter and one number or special character.");
       return;
     }
 

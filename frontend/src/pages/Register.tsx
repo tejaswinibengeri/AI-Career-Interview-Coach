@@ -25,8 +25,13 @@ export default function Register() {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
+    if (!/[A-Za-z]/.test(password) || !/[0-9\W]/.test(password)) {
+      setError("Password must contain at least one letter and one number or special character.");
       return;
     }
 
@@ -149,7 +154,7 @@ export default function Register() {
                   autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min. 6 characters"
+                  placeholder="Min. 8 characters (letters & numbers)"
                   className="w-full rounded-xl bg-surface-800/80 border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-surface-200/30 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all"
                 />
               </div>

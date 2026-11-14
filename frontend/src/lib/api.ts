@@ -1036,10 +1036,26 @@ async function request<T>(
     }
 
     if (!response.ok) {
+      let validationMsg: string | null = null;
+      if (Array.isArray(body?.details) && body.details.length > 0) {
+        const item = body.details[0];
+        const field = Array.isArray(item.loc) ? item.loc[item.loc.length - 1] : "";
+        const rawMsg = item.msg || item.message || "";
+        const cleanMsg = rawMsg.replace(/^Value error,\s*/i, "");
+        if (field && cleanMsg) {
+          validationMsg = `${field}: ${cleanMsg}`;
+        } else if (cleanMsg) {
+          validationMsg = cleanMsg;
+        }
+      }
+
       const errorMessage =
-        body?.message ||
+        validationMsg ||
+        (body?.message && body.message !== "Request validation failed" ? body.message : null) ||
         (typeof body?.detail === "string" ? body.detail : null) ||
+        body?.message ||
         `Request failed with status ${response.status}`;
+
       throw new APIError(
         errorMessage,
         response.status,
