@@ -134,6 +134,17 @@ def create_app() -> FastAPI:
     # --- Exception handlers ---
     register_exception_handlers(application)
 
+    # --- Root welcome endpoint ---
+    @application.get("/", tags=["Health"])
+    async def root():
+        return {
+            "status": "online",
+            "app": settings.APP_NAME,
+            "version": settings.APP_VERSION,
+            "docs": "/docs",
+            "health": "/api/v1/health",
+        }
+
     # --- Routers ---
     application.include_router(api_router)
 
