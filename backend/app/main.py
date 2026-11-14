@@ -117,11 +117,7 @@ def create_app() -> FastAPI:
     application.add_middleware(RateLimitMiddleware)
 
     # --- CORS ---
-    cors_origin_regex = (
-        r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
-        if settings.ENVIRONMENT.lower() != "production"
-        else None
-    )
+    cors_origin_regex = r"^https?://([a-zA-Z0-9-]+\.)*(vercel\.app|localhost|127\.0\.0\.1)(:\d+)?$"
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,

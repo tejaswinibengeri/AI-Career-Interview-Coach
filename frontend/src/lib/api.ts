@@ -5,7 +5,26 @@
  * All responses follow the standard { status, data, message } envelope.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const RAW_BASE_URL: string = (import.meta.env.VITE_API_BASE_URL || "").trim();
+
+export function buildApiUrl(endpoint: string): string {
+  const base = RAW_BASE_URL.replace(/\/+$/, "");
+  const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+
+  if (!base) {
+    return `http://localhost:8000${path}`;
+  }
+
+  // Prevent double '/api/v1' when VITE_API_BASE_URL already contains it
+  if (base.endsWith("/api/v1") && path.startsWith("/api/v1")) {
+    return `${base}${path.slice(7)}`;
+  }
+  if (base.endsWith("/api") && path.startsWith("/api/")) {
+    return `${base}${path.slice(4)}`;
+  }
+
+  return `${base}${path}`;
+}
 
 export interface APIResponse<T = unknown> {
   status: "success" | "error";
@@ -991,7 +1010,7 @@ async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<APIResponse<T>> {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const url = buildApiUrl(endpoint);
 
   const token = getStoredToken();
   const authHeaders: Record<string, string> = token
@@ -1017,10 +1036,14 @@ async function request<T>(
     }
 
     if (!response.ok) {
+      const errorMessage =
+        body?.message ||
+        (typeof body?.detail === "string" ? body.detail : null) ||
+        `Request failed with status ${response.status}`;
       throw new APIError(
-        body?.message || `Request failed with status ${response.status}`,
+        errorMessage,
         response.status,
-        body?.details
+        body?.details || body?.detail
       );
     }
 
@@ -1202,7 +1225,7 @@ export const api = {
       formData.append("resume_id", resumeId.toString());
     }
 
-    const url = `${API_BASE_URL}/api/v1/resumes`;
+    const url = buildApiUrl("/api/v1/resumes");
     const token = getStoredToken();
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
@@ -1223,7 +1246,11 @@ export const api = {
         }
       }
       if (!response.ok) {
-        throw new APIError(body?.message || "Upload failed", response.status, body?.details);
+        const errorMsg =
+          body?.message ||
+          (typeof body?.detail === "string" ? body.detail : null) ||
+          "Upload failed";
+        throw new APIError(errorMsg, response.status, body?.details || body?.detail);
       }
       return body as APIResponse<ResumeData>;
     } catch (error) {
@@ -1234,7 +1261,7 @@ export const api = {
 
   downloadResumeBlob: async (resumeId: number, versionId?: number): Promise<{ blob: Blob; filename: string }> => {
     const query = versionId ? `?version_id=${versionId}` : "";
-    const url = `${API_BASE_URL}/api/v1/resumes/${resumeId}/download${query}`;
+    const url = buildApiUrl(`/api/v1/resumes/${resumeId}/download${query}`);
     const token = getStoredToken();
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
